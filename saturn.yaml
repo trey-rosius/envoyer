@@ -1,0 +1,52 @@
+version: 1
+common:
+    resourcesPaths:
+        - saturn-component-aws-sqs.yaml
+        - saturn-component-mail-bucket.yaml
+        - saturn-subscription-mailsubscriptions.yaml
+apps:
+    - appID: mail-bucket
+      appDirPath: ./mail-bucket
+      appPort: 5002
+      appChannelAddress: 127.0.0.1
+      appProtocol: http
+      logLevel: info
+      env:
+        DAPR_API_TOKEN: diagrid://v1/02c87ee7-7be8-4069-9d7a-288615038c63/374917/saturn/mail-bucket/0af90d86-4508-4c1b-a10a-83f123f97d7f
+        DAPR_APP_ID: mail-bucket
+        DAPR_GRPC_ENDPOINT: https://grpc-prj374917.api.cloud.diagrid.io:443
+        DAPR_HTTP_ENDPOINT: https://http-prj374917.api.cloud.diagrid.io:443
+        DAPR_PUB_SUB: aws-sqs
+      enableAppHealthCheck: false
+      appHealthCheckPath: /healthz
+      appHealthProbeInterval: 5
+      appHealthProbeTimeout: 500
+      appHealthThreshold: 3
+      appLogDestination: console
+      command:
+        - uvicorn
+        - main:app
+        - --port
+        - "5002"
+    - appID: main-app
+      appDirPath: ./main-app
+      appPort: 5003
+      appChannelAddress: 127.0.0.1
+      appProtocol: http
+      logLevel: info
+      env:
+        DAPR_API_TOKEN: diagrid://v1/02c87ee7-7be8-4069-9d7a-288615038c63/374917/saturn/main-app/76fd744e-ccc2-4e9b-a9ac-68e683781c06
+        DAPR_APP_ID: main-app
+        DAPR_GRPC_ENDPOINT: https://grpc-prj374917.api.cloud.diagrid.io:443
+        DAPR_HTTP_ENDPOINT: https://http-prj374917.api.cloud.diagrid.io:443
+      enableAppHealthCheck: false
+      appHealthCheckPath: /healthz
+      appHealthProbeInterval: 5
+      appHealthProbeTimeout: 500
+      appHealthThreshold: 3
+      appLogDestination: console
+      command:
+        - uvicorn
+        - main:app
+        - --port
+        - "5003"
