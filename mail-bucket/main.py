@@ -223,20 +223,8 @@ def get_all_emails():
 
         return user_emails
 
-@app.post('/emails')
-async def emails(event:CloudEvent):
-    with DaprClient() as d:
 
-        print("event triggered")
-        parsed_email_payload = event.data['payload']
-        wf_client = wf.DaprWorkflowClient()
-        instance_id = wf_client.schedule_new_workflow(workflow=email_agent_workflow,
-                                                      input=parsed_email_payload)
-        print(f"Workflow started. Instance ID: {instance_id}")
-        state = wf_client.wait_for_workflow_completion(instance_id)
-        logging.info(f"state is {state.runtime_status}")
 
-'''
 @app.post('/emails')
 async def emails(event: CloudEvent):
     with DaprClient() as d:
@@ -262,4 +250,3 @@ async def emails(event: CloudEvent):
         except grpc.RpcError as err:
             logging.info('Error occurred while saving state item %s. Exception= %')
             raise HTTPException(status_code=500, detail=err.details())
-'''
