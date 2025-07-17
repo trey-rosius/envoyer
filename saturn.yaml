@@ -16,7 +16,9 @@ apps:
         DAPR_APP_ID: mail-bucket
         DAPR_GRPC_ENDPOINT: https://grpc-prj374917.api.cloud.diagrid.io:443
         DAPR_HTTP_ENDPOINT: https://http-prj374917.api.cloud.diagrid.io:443
+        OPENAI_API_KEY: ""
         DAPR_PUB_SUB: aws-sqs
+        DAPR_STATE_STORE: ai-email-db
       enableAppHealthCheck: false
       appHealthCheckPath: /healthz
       appHealthProbeInterval: 5
@@ -39,6 +41,7 @@ apps:
         DAPR_APP_ID: main-app
         DAPR_GRPC_ENDPOINT: https://grpc-prj374917.api.cloud.diagrid.io:443
         DAPR_HTTP_ENDPOINT: https://http-prj374917.api.cloud.diagrid.io:443
+        DAPR_PUB_SUB: aws-sqs
       enableAppHealthCheck: false
       appHealthCheckPath: /healthz
       appHealthProbeInterval: 5

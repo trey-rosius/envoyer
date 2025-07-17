@@ -11,7 +11,4 @@ spec:
   pubsubname: aws-sqs
   routes:
     default: /emails
-    rules:
-    - match: s3Emails
-      path: /subscription-emails
   topic: emails
