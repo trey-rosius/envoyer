@@ -27,7 +27,7 @@ apps:
       appLogDestination: console
       command:
         - uvicorn
-        - main:app
+        - app:app
         - --port
         - "5002"
     - appID: main-app
