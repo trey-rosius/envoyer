@@ -2,4 +2,4 @@
 .idea
 .DStore
 *.yaml
-*.env
+*.env__pycache__/
