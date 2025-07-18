@@ -4,3 +4,17 @@
 *.yaml
 *.env
 *__pycache__/
+# Ignore Dockerfiles and Docker-related files
+Dockerfile
+Dockerfile.*
+*.dockerfile
+*.Dockerfile
+*.dockerignore
+docker-compose.yml
+docker-compose.yaml
+docker-compose.*.yml
+docker-compose.*.yaml
+
+# Ignore Docker directories if any
+.docker/
+docker/
