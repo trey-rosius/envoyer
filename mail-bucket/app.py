@@ -30,6 +30,7 @@ async def emails(event: CloudEvent):
             input=parsed_email_payload
         )
         logging.info(f"Workflow started. Instance ID: {instance_id}")
+        wf_client.wait_for_workflow_start(instance_id)
         state = wf_client.wait_for_workflow_completion(instance_id)
         return {"status": state.runtime_status}
     except Exception as err:

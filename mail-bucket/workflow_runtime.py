@@ -1,14 +1,21 @@
 # workflow_runtime.py
-import dapr.ext.workflow as wf
-from dapr_agents.workflow import WorkflowApp
 
+from dapr_agents.workflow import WorkflowApp
+from dapr.ext.workflow import (
+    WorkflowRuntime,
+    DaprWorkflowContext,
+    WorkflowActivityContext,
+    RetryPolicy,
+    DaprWorkflowClient,
+    when_any,
+)
 # Create runtime instance
-wfr = wf.WorkflowRuntime()
+wfr = WorkflowRuntime()
 
 
 # Register workflows and activities
 @wfr.workflow(name="email_agent_workflow")
-def email_agent_workflow(ctx: wf.DaprWorkflowContext, email: any):
+def email_agent_workflow(ctx: WorkflowActivityContext, email: any):
     email_str = yield ctx.call_activity(display_email_content, input=email)
     ai_email = yield ctx.call_activity(ai_transform_email, input={"email": email_str})
     #payload = {"ai_email": ai_email, "original_email": email}
