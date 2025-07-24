@@ -21,7 +21,7 @@ def get_all_emails():
         return emails
 
 @app.post('/emails')
-async def emails(event: CloudEvent):
+def emails(event: CloudEvent):
     parsed_email_payload = event.data['payload']
     try:
         wf_client = DaprWorkflowClient()

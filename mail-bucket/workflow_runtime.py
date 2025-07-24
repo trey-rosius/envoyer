@@ -153,7 +153,7 @@ def save_ai_email_content(ctx, ai_email: dict):
 
 
 @wfr.activity(name="ai_transform_email")
-async def ai_transform_email(ctx, email: dict):
+def ai_transform_email(ctx, email: dict):
     json_email = json.dumps(email)
     email_agent = Agent(
         name="EmailAgent",
