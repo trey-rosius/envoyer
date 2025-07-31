@@ -20,7 +20,7 @@ from dapr.ext.workflow import (
 import logging
 
 state_store = os.getenv('DAPR_STATE_STORE', '')
-os.getenv('OPENAI_API_KEY',
+open_api = os.getenv('OPENAI_API_KEY',
           '')
 
 
@@ -124,7 +124,6 @@ def email_agent_workflow(ctx: WorkflowActivityContext, email: any):
 def display_email_content(ctx, parse_email: str):
     return parse_email
 
-
 @wfr.activity(name="extract_and_merge")
 def extract_and_merge(ctx, email_payload: dict):
     import json, re, logging
@@ -136,25 +135,32 @@ def extract_and_merge(ctx, email_payload: dict):
     except json.JSONDecodeError:
         response_dict = {}
 
-    merged = {**email_payload['original_email'], "ai_insight": response_dict}
+    merged = {**email_payload['original_email'], "aiInsights": response_dict}
     return merged
 
 
 @wfr.activity(name="save_ai_email_content")
 def save_ai_email_content(ctx, ai_email: dict):
 
-    state_store = os.getenv("DAPR_STATE_STORE", "")
-    with DaprClient() as d:
-        d.save_state(store_name=state_store,
-                     key=f"{ai_email['to']}#{ai_email['messageId']}",
-                     value=json.dumps(ai_email),
-                     state_metadata={"contentType": "application/json"})
-    return "email saved"
+    try:
+        logging.info("ai email %s", json.dumps(ai_email, ensure_ascii=False)[:1000])
+
+        with DaprClient() as d:
+            d.save_state(store_name='ai-email-db',
+                         key=f"{ai_email['to']}#{ai_email['messageId']}",
+                         value=json.dumps(ai_email),
+                         state_metadata={"contentType": "application/json"})
+    except Exception:
+        # as a fallback if something inside ai_email isn't JSON-serializable
+        logging.info("ai email %r", ai_email)
 
 
 @wfr.activity(name="ai_transform_email")
-async def ai_transform_email(ctx, email: dict):
+def ai_transform_email(ctx, email: dict):
+
+
     json_email = json.dumps(email)
+
     email_agent = Agent(
         name="EmailAgent",
         role="Email Assistant",

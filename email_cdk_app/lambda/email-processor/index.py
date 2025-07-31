@@ -1,0 +1,99 @@
+import os
+import boto3
+from ksuid import Ksuid
+from email import policy, utils
+from email.parser import BytesParser
+from urllib.parse import unquote_plus
+from aws_lambda_powertools import Logger, Tracer
+from aws_lambda_powertools.utilities.data_classes import event_source, S3Event
+import requests
+
+
+logger = Logger(service="email_parser")
+tracer = Tracer(service="email_parser")  # uses env LOG_LEVEL / POWERTOOLS_SERVICE_NAME
+
+unique_email_id = str(Ksuid())
+s3 = boto3.client("s3")
+
+ATTACH_BUCKET = os.environ["ATTACH_BUCKET"]
+
+def _get(part):
+    if part.is_multipart():
+        return b""  # or None
+    return getattr(part, "get_content", lambda: part.get_payload(decode=True))()
+
+
+@event_source(data_class=S3Event)
+@logger.inject_lambda_context
+@tracer.capture_lambda_handler
+def lambda_handler(event: S3Event, context):
+    logger.info(f"Raw S3 event {event}")
+
+    for record in event.records:
+        logger.info(f"Record: {record}")
+        bucket_name = record.s3.bucket.name
+        object_key = unquote_plus(record.s3.get_object.key)
+
+        logger.info(
+            f"S3 event bucket={bucket_name}, key={object_key}"
+        )  # structured log
+
+        raw_email = s3.get_object(Bucket=bucket_name, Key=object_key)["Body"].read()
+
+        logger.info(f"E-mail {raw_email}")
+
+        msg = BytesParser(policy=policy.default).parsebytes(raw_email)
+
+        out = {
+            "from": msg.get("from"),
+            "to": msg.get("to"),
+            "cc": msg.get("cc"),
+            "bcc": msg.get("bcc"),
+            "subject": msg.get("subject"),
+            "date": msg.get("date"),
+            "messageId": msg.get("message-id"),
+            "plainBody": "",
+            "htmlBody": "",
+            "attachments": [],
+        }
+        print(f"E-mail metadata  email_metadata={out}")
+        logger.info(f"E-mail metadata  email_metadata={out}")
+
+        for part in msg.walk():
+            if part.is_multipart():
+                continue
+            cdisp = part.get_content_disposition()
+            ctype = part.get_content_type()
+            data = _get(part)
+
+            if cdisp == "attachment":
+                fname = part.get_filename() or "unknown"
+                s3_key = f"attachments/{msg['message-id'].strip('<>')}/{fname}"
+                s3.put_object(Body=data, Bucket=ATTACH_BUCKET, Key=s3_key)
+                out["attachments"].append({"filename": fname, "s3_key": s3_key})
+
+            elif ctype == "text/plain" and not out["plainBody"]:
+                out["plainBody"] = data
+            elif ctype == "text/html" and not out["htmlBody"]:
+                out["htmlBody"] = data
+
+        addrs = [addr for _name, addr in utils.getaddresses([out["to"] or ""])]
+        addrs[0] if addrs else "unknown@example.com"
+
+        name, addr = utils.parseaddr(msg.get("from"))
+        out["fromName"] = name
+        out["from"] = addr
+
+        logger.info("Parsed e-mail", email_metadata=out)
+
+        url = "https://xxxxxxx.us-east-1.awsapprunner.com/publish_event"
+
+        headers = {"Content-Type": "application/json"}
+
+        try:
+            requests.post(url, headers=headers, json=out)
+
+            logger.info("sent events to dapr agents")
+
+        except requests.exceptions.RequestException:
+            logger.info(" exception occured at {e}")

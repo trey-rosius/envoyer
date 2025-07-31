@@ -1,0 +1,183 @@
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+type Attachment @aws_api_key @aws_iam {
+  filename: String!
+  s3_key: String!
+}
+
+type AIInsight @aws_api_key @aws_iam {
+  summary: String
+  category: String
+  sentiment: String
+  is_urgent: Boolean
+  keyDates: [String]
+  amounts: [String]
+  action_items: [String]
+  entities: [String]
+  summaryAudioUrl: String
+  links: [String]
+}
+
+input AIInsightInput @aws_api_key @aws_iam {
+  summary: String
+  category: String
+  sentiment: String
+  is_urgent: Boolean
+  keyDates: [AWSDate]
+  amounts: [String]
+  action_items: [String]
+  entities: [String]
+  links: [AWSURL]
+}
+
+enum EmailCategory {
+  WORK
+  PERSONAL
+  PROMOTIONS
+  OTHER
+}
+
+enum Sentiment {
+  POSITIVE
+  NEGATIVE
+  NEUTRAL
+  MIXED
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+enum ENTITY {
+  USER
+  EMAIL
+}
+
+enum EmailSendStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+input SendEmailInput @aws_api_key {
+  userId: String!
+  from: String!
+  to: [String!]!
+  cc: [String!]
+  bcc: [String!]
+  subject: String
+  plainBody: String
+  htmlBody: String
+  attachments: [AttachmentInput]
+}
+
+input AttachmentInput @aws_api_key @aws_iam {
+  filename: String!
+  s3_key: String!
+}
+enum Direction {
+  INBOUND
+  OUTBOUND
+}
+
+type Email @aws_api_key @aws_iam {
+  userId: AWSEmail
+  messageId: ID
+  from: AWSEmail
+  fromName: String
+  to: AWSEmail
+  subject: String
+  direction: Direction
+  entity: ENTITY
+  date: String
+  plainBody: String
+  htmlBody: String
+  attachments: [Attachment]
+  aiInsights: AIInsight
+}
+
+input EmailInput @aws_api_key @aws_iam {
+  userId: AWSEmail
+  messageId: ID
+  from: AWSEmail
+  fromName: String
+  to: AWSEmail
+  subject: String
+  direction: Direction
+  entity: ENTITY
+  date: String
+  plainBody: String
+  htmlBody: String
+  attachments: [AttachmentInput]
+  aiInsights: AIInsightInput
+}
+
+type EmailConnection @aws_api_key {
+  items: [Email!]!
+  nextToken: String
+}
+
+type User @aws_api_key {
+  id: ID!
+  email: String!
+  userId: String!
+  firstName: String!
+  lastName: String!
+  createdAt: AWSDateTime
+  updatedAt: AWSDateTime
+  lastLogin: AWSDateTime
+  status: UserStatus
+}
+
+input CreateUserInput @aws_api_key {
+  email: String!
+  firstName: String!
+  lastName: String!
+  status: UserStatus
+}
+
+input ListEmailsInput @aws_api_key {
+  limit: Int
+  nextToken: String
+}
+
+input ListByCategoryInput @aws_api_key {
+  emailId: String!
+  limit: Int
+  nextToken: String
+}
+
+input ListBySentimentInput @aws_api_key {
+  limit: Int
+  nextToken: String
+  emailId: String!
+}
+
+type Query {
+  listEmails(emailId: String!, limit: Int, nextToken: String): EmailConnection
+    @aws_api_key
+  getEmail(emailId: String!, messageId: String!): Email @aws_api_key
+  listEmailsByCategory(input: ListByCategoryInput!): EmailConnection
+    @aws_api_key
+  listEmailsBySentiment(input: ListBySentimentInput!): EmailConnection
+    @aws_api_key
+  getUser(userId: ID!): User @aws_api_key
+}
+
+type Mutation {
+  createUser(input: CreateUserInput!): String! @aws_api_key
+  markAsRead(emailId: ID!): Email @aws_api_key
+  sendEmail(input: SendEmailInput!): Boolean! @aws_api_key
+  deleteEmail(emailId: ID!): Email @aws_api_key
+  notifyNewEmail(email: EmailInput!): Email @aws_api_key @aws_iam
+}
+
+type Subscription {
+  onNewEmail: Email @aws_api_key @aws_subscribe(mutations: ["notifyNewEmail"])
+}

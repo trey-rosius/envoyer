@@ -17,6 +17,16 @@ docker-compose.*.yaml
 
 *.venv
 
+# secrets
+.env
+.env.*
+*.pem
+*.key
+
+# python
+__pycache__/
+*.py[cod]
+
 # Ignore Docker directories if any
 .docker/
 docker/

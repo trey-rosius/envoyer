@@ -36,11 +36,15 @@ To use this template for your Dapr AI Hackathon submission:
 
 ### 🚀 Project Name
 
-[Your project name here]
+Envoyer: An AI Email Ops Client for AWS SES Customers
 
 ### 📝 Summary
 
-[Provide an overview of your application and its core use case]
+I work with teams who send/receive a high volume of emails via AWS Simple Email Service (SES). They all share the same pain: inbox chaos translates directly into missed leads, slower support, and lost revenue. 
+
+While AWS SES is exceptionally reliable and cost-effective for sending and receiving, the last mile—triaging, understanding, and acting on messages—still depends on humans reading every thread.
+
+I built an AI Email Ops Agent that sits next to SES to summarize, classify, prioritize, and propose actions (reply templates, routing, or escalation) the moment an email lands, so teams can move from “read and react” to “route and resolve.”
 
 ### 🏆 Category
 
@@ -53,43 +57,104 @@ Choose one of the following solution categories:
 
 ### 💻 Technology Used
 
-- **Platform**: [Dapr OSS, Catalyst, or both]
-- **Dapr APIs**: [List the Dapr APIs you leveraged (Workflow API, Pub/Sub, State, etc.)]
-- **Programming Languages**: [List the languages used]
-- **Additional Technologies**: [List any other significant technologies, frameworks, or tools used]
+- **Platform**: [Catalyst]
+- **Dapr APIs**: [Workflow API, Pub/Sub, State,)]
+- **Programming Languages**: [Python, Typescript]
+- **Additional Technologies**: [AWS CDK, AWS Lambda, AWS S3, AWS SES]
 
 ### 📋 Project Features
 
-- [Feature 1]
-- [Feature 2]
-- [Feature 3]
-- ...
+- Invoke an agentic workflow for each email received through AWS SES
+
+- Summarize the email in 1–3 sentences (who/what/when/urgency).
+
+- Classify into business categories (Sales, Support, Billing, Marketing/Promos, Spam, Other).
+
+- Extract critical entities (dates, amounts, contacts, order IDs, SLAs, sentiment).
+
+- Prioritize (P0–P3) using rules + signals (VIP sender, negative sentiment, due date).
+
 
 ### 🏗️ Architecture
 
-[Include a brief description of your application's architecture. Consider adding a diagram image here.]
+![solutions_architecture](assets/solutions_arch.png)
+
+The application starts when an email is sent to this SES Inbound Email Address(`rosius@846agents.com`).
+
+AWS SES saves the email in an S3 bucket. S3 triggers a lambda function. This lambda function grabs the email, 
+extracts it's content and sends a message into an SQS queue through the Catalyst endpoint hosted in AWS Apprunner.
+
+A subscribed service receives the event, summarizes, classifies.... and saves the information into a mongodb table.
+
+We also have an aws appsync endpoint to help us retrieve emails from mongodb and also send emails.
 
 ### 🎬 Demo
 
-[Provide instructions on how to access your demo video (3-5 minutes) showing the working application, the workflow or agent behavior, and how Dapr and/or Catalyst was used]
+https://youtu.be/xAlz16Oa1gE
 
 ## Installation & Deployment Instructions
 
 ### Prerequisites
-
-- [List required software, APIs, accounts, etc.]
-- [Include version requirements if applicable]
+- AWS CLI
+- AWS Credentials
+- AWS CDK CLI
+- Docker
+- Python 3.11.6
+- Create and Setup a domain DKIM(https://docs.aws.amazon.com/ses/latest/dg/creating-identities.html#verify-domain-procedure)
 
 ### Additional Set-Up
+#### Step 1
+Update the OpenAI Key and run the application like a catalyst app. 
 
-[Provide instructions for running your application, optionally deploying, etc.]
+Push the catalyst application to AWS ECR and then AppRunner.
+
+Navigate to the `email_cdk_app` inside the `email_cdk_app-stack.ts` file, replace the domain name with 
+your verified domain name from AWS SES
+
+```typescript
+  const hostedZone = route53.HostedZone.fromLookup(this, "Zone", {
+      domainName: "REPLACE_WITH_YOUR_DOMAIN",
+    });
+```
+#### Step 2
+
+Navigate the the `api-contruct.ts` file and replace the endpoint with the Apprunner endpoint for the
+`mail-bucket` service.
+```ts
+    const emailServiceAPIDatasource = this.api.addHttpDataSource(
+      "MailBucketService",
+      "https://xxxxxxxxxxx.us-east-1.awsapprunner.com"
+    );
+```
+
+#### Step 3
+Navigate to the `index.py` file in the directory `lambda/email-processor` and update the endpoint on line
+89
+```pycon
+
+  logger.info("Parsed e-mail", email_metadata=out)
+
+        url = "https://xxxxxxx.us-east-1.awsapprunner.com/publish_event"
+
+        headers = {"Content-Type": "application/json"}
+```
+
+#### Step 4
+
+Synthesize and deploy the application 
+
+```bash
+cdk synth
+cdk bootstrap
+cdk deploy
+
+
+```
 
 ## Team Members
 
-- [Team Member 1 Name](https://github.com/username1)
-- [Team Member 2 Name](https://github.com/username2)
-- ...
+- Me
 
 ## License
 
-[Include license information here - we recommend MIT or Apache 2.0 for hackathon projects]
+No License

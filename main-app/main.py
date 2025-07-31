@@ -1,6 +1,6 @@
 import json
 import os
-
+from dapr.ext.workflow import DaprWorkflowClient
 from dapr.clients import DaprClient
 from dapr.clients.grpc._request import TransactionalStateOperation, TransactionOperationType
 from fastapi import FastAPI, HTTPException
@@ -18,6 +18,7 @@ def publish_event(payload: Dict[str, Any]):
     with DaprClient() as d:
         try:
             logging.info(f'sending event event: s3Emails')
+
             d.publish_event(pubsub_name=pub_sub, topic_name="emails",
                             data=json.dumps({"payload": payload, "event_type": "s3Emails"}),
                             data_content_type="application/json")
