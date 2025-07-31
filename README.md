@@ -152,6 +152,9 @@ cdk deploy
 
 ```
 
+## Application Frontend 
+https://main.d1twti1ffo94b8.amplifyapp.com/
+
 ## Team Members
 
 - Me
