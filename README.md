@@ -32,7 +32,8 @@ To use this template for your Dapr AI Hackathon submission:
 
 ## Project Details
 
-> **NOTE**: Replace this section with your project information as you iterate
+I faced a ton of issues, which are highlighted in this discord thread https://discord.com/channels/1255285156739285114/1383062057045458985
+
 
 ### 🚀 Project Name
 
