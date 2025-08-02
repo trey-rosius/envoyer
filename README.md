@@ -32,8 +32,87 @@ To use this template for your Dapr AI Hackathon submission:
 
 ## Project Details
 
-I faced a ton of issues, which are highlighted in this discord thread https://discord.com/channels/1255285156739285114/1383062057045458985
+### App Ids
+This project has 2 catalyst Applications
+- **mail-bucket** 
+- **main-app**
 
+### Components
+- **ai-email-db** is a mongoDb database for state management.
+- **aws-sqs** is an sqs/sns aws service for pubsub
+
+### PubSub Subscriptions
+- **mailsubscriptions** has a topic called `emails`. AppIds subscribed to that topic receive events 
+when a new email arrives.
+
+### Agentic Workflow
+When AWS SES receives a new email, it stores a copy of that email in an S3 bucket and then triggers a 
+lambda function. Within this lambda function is an apprunner endpoint for our `main-app` catalyst service. 
+
+This endpoint has an extension called `publish_events`. This endpoint pushes the details of the email as
+an event to an the pubsub service `aws-sqs`. 
+
+Subscribed to that service is the `mail-bucket` application. 
+
+The endpoint `/emails` receives the event and then invokes the agentic workflow
+
+```python
+@app.post('/emails')
+def emails(event: CloudEvent):
+
+    try:
+        payload = event.data['payload']
+        if not isinstance(payload, dict):
+            raise ValueError("data.payload must be an object")
+    except Exception as e:
+        logging.error(f"Malformed event payload: {e}")
+        raise HTTPException(status_code=400, detail="Invalid event: missing or bad data.payload")
+
+    instance_id = _stable_instance_id_from_payload(payload, event)
+
+    try:
+        wf = DaprWorkflowClient()
+
+        # Idempotent start: duplicates will hit "already exists / conflict"
+        wf.schedule_new_workflow(
+            workflow=email_agent_workflow,
+            input=payload,
+            instance_id=instance_id
+        )
+        logging.info(f"Workflow start requested. instance_id={instance_id}")
+
+        # Optionally block for visibility (keep if you want sync behavior)
+        wf.wait_for_workflow_start(instance_id)
+        state = wf.wait_for_workflow_completion(instance_id)
+        return {"instance_id": instance_id, "status": state.runtime_status}
+
+    except Exception as err:
+        msg = str(err).lower()
+        if any(sig in msg for sig in ["already exists", "instance already started", "conflict"]):
+            # Duplicate delivery: return the existing instance
+            logging.info(f"Duplicate detected; returning existing workflow state for {instance_id}")
+            try:
+                wf = DaprWorkflowClient()
+                wf.wait_for_workflow_start(instance_id)
+                state = wf.wait_for_workflow_completion(instance_id)
+                return {"instance_id": instance_id, "status": state.runtime_status}
+            except Exception as inner:
+                logging.error(f"Failed to read existing instance {instance_id}: {inner}")
+                raise HTTPException(status_code=500, detail=f"Existing workflow fetch failed: {inner}")
+
+        logging.error(f"Error scheduling workflow: {err}")
+        raise HTTPException(status_code=500, detail=str(err))
+
+```
+I added a hack to only run this workflow once per event received. Currently, workflows have a bug which 
+causes the workflow to be triggered multiple times and sometimes the workflows get stuck and fail. 
+
+This discord thread outlines all the issues i faced https://discord.com/channels/1255285156739285114/1383062057045458985
+
+Due to the numerous problems with workflows, i couldn't add different steps to my workflow like saving 
+to a vector database and connecting to gmail calendar for enhanced email features. 
+
+I spent a lot of time fighting catalyst than being productive.
 
 ### 🚀 Project Name
 
